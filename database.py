@@ -1,20 +1,23 @@
 import os
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-DATABASE_NAME = os.path.join('/tmp', 'notes.db')
+# سنقرأ عنوان الاتصال من متغير البيئة DATABASE_URL
+# Render يضعه تلقائياً عندما نربط الخدمتين
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_connection():
-    conn = sqlite3.connect(DATABASE_NAME, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+    """إنشاء اتصال بقاعدة PostgreSQL وإعادته"""
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
 def init_db():
+    """تهيئة جدول الملاحظات إذا لم يكن موجوداً"""
     conn = get_connection()
     cursor = conn.cursor()
-    # إنشاء الجدول إن لم يكن موجوداً (للبدء الجديد)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             created_at TEXT NOT NULL,
@@ -28,23 +31,6 @@ def init_db():
     conn.close()
 
 def migrate_db():
-    """إضافة الأعمدة الجديدة إذا كانت مفقودة (للترقية من إصدار سابق)"""
-    conn = get_connection()
-    cursor = conn.cursor()
-    # قائمة الأعمدة الجديدة مع استعلام الإضافة
-    new_columns = [
-        ("status", "TEXT DEFAULT 'أفكار'"),
-        ("icon", "TEXT"),
-        ("order_index", "INTEGER DEFAULT 0")
-    ]
-    for col_name, col_def in new_columns:
-        try:
-            cursor.execute(f"ALTER TABLE notes ADD COLUMN {col_name} {col_def}")
-        except sqlite3.OperationalError:
-            pass  # العمود موجود مسبقاً
-    conn.commit()
-    conn.close()
-
-# استدعاء التهيئة عند استيراد الملف
-init_db()
-migrate_db()
+    """لا حاجة للترحيل التدريجي مع PostgreSQL لأننا بدأنا من الصفر،
+    لكن نترك الدالة فارغة لتوافق الاستدعاءات القديمة"""
+    pass

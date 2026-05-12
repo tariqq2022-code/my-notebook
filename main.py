@@ -1,24 +1,24 @@
 from fastapi import FastAPI, HTTPException, status, Query
-from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from datetime import datetime, timezone
 from typing import List, Optional
 import database as db
 from models import NoteCreate, NoteUpdate, NoteResponse
 
 app = FastAPI()
-@app.get("/")
-def root():
-    return RedirectResponse(url="/static/index.html")
+
 db.init_db()
-db.migrate_db()
 
 @app.on_event("startup")
 def on_startup():
     db.init_db()
-    db.migrate_db()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def root():
+    return RedirectResponse(url="/static/index.html")
 
 @app.get("/notes", response_model=List[NoteResponse])
 def get_notes(search: Optional[str] = Query(None), status: Optional[str] = Query(None)):
@@ -27,11 +27,11 @@ def get_notes(search: Optional[str] = Query(None), status: Optional[str] = Query
     query = "SELECT * FROM notes WHERE 1=1"
     params = []
     if search:
-        query += " AND (title LIKE ? OR content LIKE ?)"
+        query += " AND (title LIKE %s OR content LIKE %s)"
         like = f"%{search}%"
         params.extend([like, like])
     if status:
-        query += " AND status = ?"
+        query += " AND status = %s"
         params.append(status)
 
     query += " ORDER BY status, order_index, updated_at DESC"
@@ -47,12 +47,12 @@ def create_note(note: NoteCreate):
     cursor = conn.cursor()
     cursor.execute(
         """INSERT INTO notes (title, content, created_at, updated_at, status, icon, order_index)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
         (note.title, note.content, now, now, note.status, note.icon, note.order_index)
     )
+    new_id = cursor.fetchone()["id"]
     conn.commit()
-    new_id = cursor.lastrowid
-    cursor.execute("SELECT * FROM notes WHERE id = ?", (new_id,))
+    cursor.execute("SELECT * FROM notes WHERE id = %s", (new_id,))
     new_note = cursor.fetchone()
     conn.close()
     if new_note is None:
@@ -63,7 +63,7 @@ def create_note(note: NoteCreate):
 def get_note(note_id: int):
     conn = db.get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+    cursor.execute("SELECT * FROM notes WHERE id = %s", (note_id,))
     note = cursor.fetchone()
     conn.close()
     if note is None:
@@ -74,7 +74,7 @@ def get_note(note_id: int):
 def update_note(note_id: int, note_data: NoteUpdate):
     conn = db.get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+    cursor.execute("SELECT * FROM notes WHERE id = %s", (note_id,))
     note = cursor.fetchone()
     if note is None:
         conn.close()
@@ -88,12 +88,12 @@ def update_note(note_id: int, note_data: NoteUpdate):
     now = datetime.now(timezone.utc).isoformat()
 
     cursor.execute(
-        """UPDATE notes SET title=?, content=?, updated_at=?, status=?, icon=?, order_index=?
-           WHERE id=?""",
+        """UPDATE notes SET title=%s, content=%s, updated_at=%s, status=%s, icon=%s, order_index=%s
+           WHERE id=%s""",
         (updated_title, updated_content, now, updated_status, updated_icon, updated_order, note_id)
     )
     conn.commit()
-    cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+    cursor.execute("SELECT * FROM notes WHERE id = %s", (note_id,))
     updated_note = cursor.fetchone()
     conn.close()
     return NoteResponse(**updated_note)
@@ -102,16 +102,15 @@ def update_note(note_id: int, note_data: NoteUpdate):
 def delete_note(note_id: int):
     conn = db.get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM notes WHERE id = ?", (note_id,))
+    cursor.execute("SELECT id FROM notes WHERE id = %s", (note_id,))
     if cursor.fetchone() is None:
         conn.close()
         raise HTTPException(status_code=404, detail="الملاحظة غير موجودة")
-    cursor.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+    cursor.execute("DELETE FROM notes WHERE id = %s", (note_id,))
     conn.commit()
     conn.close()
     return None
 
-# مسار إضافي لتحديث ترتيب عدة ملاحظات دفعة واحدة (لتحسين أداء السحب)
 from pydantic import BaseModel
 class ReorderItem(BaseModel):
     id: int
@@ -124,7 +123,7 @@ def reorder_notes(payload: ReorderPayload):
     conn = db.get_connection()
     cursor = conn.cursor()
     for item in payload.items:
-        cursor.execute("UPDATE notes SET order_index = ? WHERE id = ?",
+        cursor.execute("UPDATE notes SET order_index = %s WHERE id = %s",
                        (item.order_index, item.id))
     conn.commit()
     conn.close()
