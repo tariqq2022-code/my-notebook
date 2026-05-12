@@ -1,6 +1,7 @@
+import os
 import sqlite3
 
-DATABASE_NAME = "notes.db"
+DATABASE_NAME = os.path.join('/tmp', 'notes.db')
 
 def get_connection():
     conn = sqlite3.connect(DATABASE_NAME, check_same_thread=False)
