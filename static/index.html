@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مفكرتي الاحترافية</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- زر الوضع الداكن -->
+    <button id="dark-mode-toggle" title="تبديل الوضع الداكن">🌓</button>
+
+    <div class="container">
+        <header>
+            <h1>📒 مفكرتي الشخصية</h1>
+            <p>نظّم أفكارك بأسلوب كانبان العصري</p>
+        </header>
+
+        <!-- شريط البحث العلوي -->
+        <div class="toolbar">
+            <input type="text" id="search-input" placeholder="🔍 ابحث في الملاحظات...">
+            <div class="view-tabs">
+                <button class="tab active" data-view="list">📋 قائمة</button>
+                <button class="tab" data-view="kanban">📌 كانبان</button>
+            </div>
+            <button id="export-btn" title="تصدير إلى JSON">💾 تصدير</button>
+        </div>
+
+        <!-- نموذج الإضافة / التعديل -->
+        <form id="note-form" class="hidden-initially">
+            <input type="hidden" id="note-id">
+            <div class="form-row">
+                <input type="text" id="emoji-input" maxlength="2" placeholder="🌟" class="emoji-input" title="أيقونة (إيموجي)">
+                <input type="text" id="title" placeholder="عنوان الملاحظة" required>
+            </div>
+            <textarea id="content" placeholder="محتوى الملاحظة..." required></textarea>
+            <select id="status-select">
+                <option value="أفكار">💡 أفكار</option>
+                <option value="قيد التنفيذ">⏳ قيد التنفيذ</option>
+                <option value="مكتملة">✅ مكتملة</option>
+            </select>
+            <div class="form-actions">
+                <button type="submit" id="save-btn">حفظ</button>
+                <button type="button" id="cancel-btn" style="display:none;">إلغاء</button>
+            </div>
+        </form>
+
+        <!-- عرض القائمة -->
+        <div id="list-view" class="view active">
+            <div id="notes-list"></div>
+        </div>
+
+        <!-- عرض الكانبان (مخفي افتراضياً) -->
+        <div id="kanban-view" class="view" style="display: none;">
+            <div class="kanban-board">
+                <div class="kanban-column" data-status="أفكار">
+                    <h3>💡 أفكار</h3>
+                    <div class="kanban-items" id="kanban-أفكار"></div>
+                </div>
+                <div class="kanban-column" data-status="قيد التنفيذ">
+                    <h3>⏳ قيد التنفيذ</h3>
+                    <div class="kanban-items" id="kanban-قيد التنفيذ"></div>
+                </div>
+                <div class="kanban-column" data-status="مكتملة">
+                    <h3>✅ مكتملة</h3>
+                    <div class="kanban-items" id="kanban-مكتملة"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- حاوية الإشعارات -->
+    <div id="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
