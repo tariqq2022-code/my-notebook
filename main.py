@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, status, Query
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -6,7 +7,9 @@ import database as db
 from models import NoteCreate, NoteUpdate, NoteResponse
 
 app = FastAPI()
-
+@app.get("/")
+def root():
+    return RedirectResponse(url="/static/index.html")
 db.init_db()
 db.migrate_db()
 
